@@ -1,4 +1,4 @@
-# claude-code-command-switch Windows 命令模板
+﻿# claude-code-command-switch Windows 命令模板
 # 此文件会被 claude-switch 自动使用
 
 # 模板变量（会被自动替换）:

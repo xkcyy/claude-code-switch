@@ -1,4 +1,4 @@
-# claude-code-command-switch Windows 安装入口
+﻿# claude-code-command-switch Windows 安装入口
 # 使用方法: powershell -c "irm https://raw.githubusercontent.com/xkcyy/claude-code-switch/main/install.ps1 | iex"
 
 $REPO_URL = "https://raw.githubusercontent.com/xkcyy/claude-code-switch/main"

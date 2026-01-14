@@ -1,4 +1,4 @@
-# claude-code-command-switch Windows 核心管理脚本
+﻿# claude-code-command-switch Windows 核心管理脚本
 
 param(
     [Parameter(Position = 0)]
