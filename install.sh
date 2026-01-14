@@ -1,10 +1,10 @@
 #!/bin/bash
 # claude-code-command-switch 一键安装脚本
-# 使用方法: curl -sSL https://raw.githubusercontent.com/your-repo/main/install.sh | bash
+# 使用方法: curl -sSL https://raw.githubusercontent.com/xkcyy/claude-code-switch/main/install.sh | bash
 
 set -e
 
-REPO_URL="https://raw.githubusercontent.com/your-username/claude-code-command-switch/main"
+REPO_URL="https://raw.githubusercontent.com/xkcyy/claude-code-switch/main"
 INSTALL_DIR="$HOME/.claude-switch"
 BIN_DIR="$HOME/.local/bin"
 

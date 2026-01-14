@@ -1,10 +1,10 @@
 # claude-code-command-switch Windows 安装脚本
-# 使用方法: powershell -c "irm https://raw.githubusercontent.com/your-repo/main/install.ps1 | iex"
+# 使用方法: powershell -c "irm https://raw.githubusercontent.com/xkcyy/claude-code-switch/main/install.ps1 | iex"
 
 $ErrorActionPreference = "Stop"
 
 # 配置
-$REPO_URL = "https://raw.githubusercontent.com/your-username/claude-code-command-switch/main"
+$REPO_URL = "https://raw.githubusercontent.com/xkcyy/claude-code-switch/main"
 $INSTALL_DIR = "$env:USERPROFILE\.claude-switch"
 $BIN_DIR = "$env:USERPROFILE\.claude-switch\bin"
 
