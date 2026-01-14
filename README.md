@@ -3,7 +3,7 @@
 > 为 Claude Code CLI 提供多模型命令切换能力，一键切换不同的 AI 模型
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue.svg)](https://github.com/your-username/claude-code-command-switch)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue.svg)](https://github.com/xkcyy/claude-code-switch)
 
 ## 功能特性
 
@@ -19,10 +19,10 @@
 
 ```powershell
 # 方法 1: 使用 PowerShell 一键安装（推荐）
-powershell -c "irm https://raw.githubusercontent.com/your-username/claude-code-command-switch/main/install.ps1 | iex"
+powershell -c "irm https://raw.githubusercontent.com/xkcyy/claude-code-switch/main/install.ps1 | iex"
 
 # 方法 2: 手动安装
-git clone https://github.com/your-username/claude-code-command-switch.git
+git clone https://github.com/xkcyy/claude-code-switch.git
 cd claude-code-command-switch
 .\install.ps1
 ```
@@ -36,13 +36,13 @@ $env:Path += ";$env:USERPROFILE\.claude-switch\bin"
 
 ```bash
 # 方法 1: 使用 curl 一键安装（推荐）
-curl -sSL https://raw.githubusercontent.com/your-username/claude-code-command-switch/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/xkcyy/claude-code-switch/main/install.sh | bash
 
 # 方法 2: 使用 wget
-wget -qO- https://raw.githubusercontent.com/your-username/claude-code-command-switch/main/install.sh | bash
+wget -qO- https://raw.githubusercontent.com/xkcyy/claude-code-switch/main/install.sh | bash
 
 # 方法 3: 手动安装
-git clone https://github.com/your-username/claude-code-command-switch.git
+git clone https://github.com/xkcyy/claude-code-switch.git
 cd claude-code-command-switch
 chmod +x install.sh
 ./install.sh
