@@ -1,0 +1,295 @@
+# claude-code-command-switch Windows 核心管理脚本
+
+param(
+    [Parameter(Position = 0)]
+    [string]$Command = "help",
+
+    [Parameter(Position = 1, ValueFromRemainingArguments = $true)]
+    [string[]]$Args
+)
+
+# 配置
+$INSTALL_DIR = "$env:USERPROFILE\.claude-switch"
+$CONFIG_FILE = "$INSTALL_DIR\models.conf"
+$COMMANDS_DIR = "$INSTALL_DIR\commands"
+$BIN_DIR = "$INSTALL_DIR\bin"
+
+# 颜色输出
+function Info-Message { Write-Host "[INFO] $args" -ForegroundColor Green }
+function Warn-Message { Write-Host "[WARN] $args" -ForegroundColor Yellow }
+function Error-Message { Write-Host "[ERROR] $args" -ForegroundColor Red; exit 1 }
+
+# 显示帮助
+function Show-Help {
+    @"
+
+claude-code-command-switch - 多模型命令切换工具
+
+用法:
+  claude-switch <command> [options]
+
+命令:
+  add <name>              添加新的模型命令
+  remove <name>           删除模型命令
+  list                    列出所有可用命令
+  edit                    编辑配置文件
+  init                    重新初始化配置
+  help                    显示此帮助信息
+
+示例:
+  claude-switch add glm                    # 添加 claude-glm 命令
+  claude-switch list                       # 查看所有命令
+  claude-glm "帮我写一个 PowerShell 脚本"  # 使用 glm 模型
+
+配置文件: ~/.claude-switch/models.conf
+
+配置文件格式:
+  COMMAND_NAME|MODEL_ID|API_ENDPOINT|API_KEY_ENV_VAR|DESCRIPTION
+
+示例配置:
+  claude-glm|glm-4|https://open.bigmodel.cn/api/paas/v4|GLM_API_KEY|智谱 GLM-4
+  claude-231|deepseek-chat|https://api.deepseek.com/v1|DEEPSEEK_API_KEY|DeepSeek
+
+"@
+}
+
+# 初始化
+function Initialize-Config {
+    if (!(Test-Path $INSTALL_DIR)) {
+        New-Item -ItemType Directory -Path $INSTALL_DIR -Force | Out-Null
+    }
+
+    if (!(Test-Path $COMMANDS_DIR)) {
+        New-Item -ItemType Directory -Path $COMMANDS_DIR -Force | Out-Null
+    }
+
+    if (!(Test-Path $CONFIG_FILE)) {
+        @"
+# claude-code-command-switch 模型配置文件
+# 格式: COMMAND_NAME|MODEL_ID|API_ENDPOINT|API_KEY_ENV_VAR|DESCRIPTION
+
+# 示例配置（取消注释并填写您的 API Key）
+# claude-glm|glm-4|https://open.bigmodel.cn/api/paas/v4|GLM_API_KEY|智谱 GLM-4
+# claude-231|deepseek-chat|https://api.deepseek.com/v1|DEEPSEEK_API_KEY|DeepSeek V3
+# claude-gpt|gpt-4-turbo|https://api.openai.com/v1|OPENAI_API_KEY|GPT-4 Turbo
+"@ | Out-File -FilePath $CONFIG_FILE -Encoding UTF8
+
+        Info-Message "已创建默认配置文件: $CONFIG_FILE"
+    }
+    else {
+        Info-Message "配置文件已存在"
+    }
+}
+
+# 列出所有命令
+function Show-CommandList {
+    Write-Host ""
+    Write-Host "可用的 claude 模型命令:" -ForegroundColor Cyan
+    Write-Host ""
+
+    if (!(Test-Path $CONFIG_FILE) -or ((Get-Content $CONFIG_FILE -ErrorAction SilentlyContinue).Count -eq 0)) {
+        Warn-Message "配置文件为空，请先添加模型配置"
+        Write-Host ""
+        Info-Message "使用 'claude-switch edit' 编辑配置文件"
+        return
+    }
+
+    $count = 0
+    $lines = Get-Content $CONFIG_FILE -ErrorAction SilentlyContinue
+
+    foreach ($line in $lines) {
+        # 跳过注释和空行
+        if ($line -match '^\s*#' -or $line -match '^\s*$') {
+            continue
+        }
+
+        $parts = $line -split '\|'
+        if ($parts.Count -lt 5) {
+            continue
+        }
+
+        $count++
+        $name = $parts[0].Trim()
+        $modelId = $parts[1].Trim()
+        $desc = $parts[4].Trim()
+
+        # 检查命令是否已安装
+        $cmdPath = "$BIN_DIR\$name.cmd"
+        if (Test-Path $cmdPath) {
+            $status = "✓ 已安装" -replace "✓", [char]0x2713
+            $statusColor = "Green"
+        }
+        else {
+            $status = "✗ 未安装" -replace "✗", [char]0x2717
+            $statusColor = "Yellow"
+        }
+
+        Write-Host "  $($count.ToString().PadLeft(2)). " -NoNewline
+        Write-Host "$($name.PadRight(20))" -ForegroundColor Cyan -NoNewline
+        Write-Host " → " -NoNewline
+        Write-Host $modelId -ForegroundColor Green
+        Write-Host "     $($desc.PadLeft(0))" -NoNewline
+        Write-Host ""
+        Write-Host "     状态: " -NoNewline
+        Write-Host $status -ForegroundColor $statusColor
+        Write-Host ""
+    }
+
+    if ($count -eq 0) {
+        Warn-Message "未找到任何模型配置"
+        Write-Host ""
+        Info-Message "使用 'claude-switch edit' 编辑配置文件添加模型"
+    }
+}
+
+# 添加命令
+function Add-Command {
+    param([string]$Name)
+
+    if ([string]::IsNullOrWhiteSpace($Name)) {
+        Error-Message "请指定命令名称，例如: claude-switch add glm"
+    }
+
+    $cmdName = "claude-$Name"
+
+    # 检查配置文件中是否存在
+    $configContent = Get-Content $CONFIG_FILE -ErrorAction SilentlyContinue
+    $line = $configContent | Where-Object { $_ -match "^$cmdName\|" }
+
+    if (!$line) {
+        Error-Message "未找到 $cmdName 的配置，请先在配置文件中添加"
+    }
+
+    # 解析配置
+    $parts = $line -split '\|'
+    $modelName = $parts[0].Trim()
+    $modelId = $parts[1].Trim()
+    $apiEndpoint = $parts[2].Trim()
+    $keyEnv = $parts[3].Trim()
+    $desc = $parts[4].Trim()
+
+    Info-Message "正在安装命令: $cmdName"
+    Write-Host "  模型: $modelId"
+    Write-Host "  接口: $apiEndpoint"
+    Write-Host "  Key: $keyEnv"
+
+    # 创建命令脚本
+    $scriptPath = "$COMMANDS_DIR\$cmdName.ps1"
+
+    @"
+@echo off
+REM Auto-generated by claude-code-command-switch
+REM Model: $modelId
+
+setlocal
+
+REM 检查 API Key
+if "%$keyEnv%"=="" (
+    echo 错误: 环境变量 $keyEnv 未设置
+    echo.
+    echo 请运行: setx $keyEnv "your-api-key"
+    echo 然后重启终端
+    exit /b 1
+)
+
+REM 设置环境变量并调用 claude
+set ANTHROPIC_API_KEY=%$keyEnv%
+set ANTHROPIC_BASE_URL=$apiEndpoint
+
+claude %*
+"@ | Out-File -FilePath "$BIN_DIR\$cmdName.cmd" -Encoding ASCII
+
+    # 创建 PowerShell 版本
+    @"
+# Auto-generated by claude-code-command-switch
+# Model: $modelId
+
+`$key = [Environment]::GetEnvironmentVariable("$keyEnv")
+
+if ([string]::IsNullOrEmpty(`$key)) {
+    Write-Host "错误: 环境变量 $keyEnv 未设置" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "请运行: `[Environment]::SetEnvironmentVariable('$keyEnv', 'your-api-key', 'User')`"
+    Write-Host "然后重启终端"
+    exit 1
+}
+
+`$env:ANTHROPIC_API_KEY = `$key
+`$env:ANTHROPIC_BASE_URL = "$apiEndpoint"
+
+& claude `$args
+"@ | Out-File -FilePath $scriptPath -Encoding UTF8
+
+    Info-Message "命令 $cmdName 安装成功！"
+    Write-Host ""
+    Write-Host "现在可以使用: $cmdName `"你的问题`""
+    Write-Host "示例: $cmdName `"帮我写一个 PowerShell 脚本`""
+}
+
+# 删除命令
+function Remove-Command {
+    param([string]$Name)
+
+    if ([string]::IsNullOrWhiteSpace($Name)) {
+        Error-Message "请指定要删除的命令名称"
+    }
+
+    $cmdName = "claude-$Name"
+    $cmdPath = "$BIN_DIR\$cmdName.cmd"
+    $psPath = "$COMMANDS_DIR\$cmdName.ps1"
+
+    if (!(Test-Path $cmdPath)) {
+        Warn-Message "命令 $cmdName 不存在"
+        return
+    }
+
+    Remove-Item $cmdPath -Force -ErrorAction SilentlyContinue
+    Remove-Item $psPath -Force -ErrorAction SilentlyContinue
+
+    Info-Message "命令 $cmdName 已删除"
+}
+
+# 编辑配置文件
+function Edit-Config {
+    if (!(Test-Path $CONFIG_FILE)) {
+        Initialize-Config
+    }
+
+    Start-Process notepad.exe -ArgumentList $CONFIG_FILE
+    Info-Message "配置文件已更新，请运行 'claude-switch list' 查看可用命令"
+}
+
+# 主函数
+function Main {
+    switch ($Command.ToLower()) {
+        "add" {
+            if ($Args.Count -eq 0) {
+                Error-Message "请指定命令名称，例如: claude-switch add glm"
+            }
+            Add-Command -Name $Args[0]
+        }
+        {$_ -in "remove", "rm"} {
+            if ($Args.Count -eq 0) {
+                Error-Message "请指定要删除的命令名称"
+            }
+            Remove-Command -Name $Args[0]
+        }
+        {$_ -in "list", "ls"} {
+            Show-CommandList
+        }
+        {$_ -in "edit", "vi"} {
+            Edit-Config
+        }
+        "init" {
+            Initialize-Config
+        }
+        "help" {
+            Show-Help
+        }
+        default {
+            Error-Message "未知命令: $Command`n使用 'claude-switch help' 查看帮助"
+        }
+    }
+}
+
+Main

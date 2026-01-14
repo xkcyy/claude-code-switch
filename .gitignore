@@ -1,0 +1,32 @@
+# 配置文件（包含 API Key）
+models.conf
+*.conf
+
+# 生成的命令脚本
+commands/
+*.sh~
+
+# 日志文件
+*.log
+
+# 临时文件
+*.tmp
+*.bak
+*.swp
+*~
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# IDE 配置
+.vscode/
+.idea/
+*.iml
+
+# Node.js (如果将来添加)
+node_modules/
+package-lock.json
+
+# Claude Code 配置
+.claude/
